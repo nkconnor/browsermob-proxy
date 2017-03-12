@@ -51,6 +51,7 @@ import org.littleshoot.proxy.ChainedProxyManager;
 import org.littleshoot.proxy.HttpFilters;
 import org.littleshoot.proxy.HttpFiltersSource;
 import org.littleshoot.proxy.HttpFiltersSourceAdapter;
+import org.littleshoot.proxy.HttpFiltersAdapter;
 import org.littleshoot.proxy.HttpProxyServer;
 import org.littleshoot.proxy.HttpProxyServerBootstrap;
 import org.littleshoot.proxy.MitmManager;
@@ -1108,6 +1109,21 @@ public class BrowserMobProxyServer implements BrowserMobProxy {
             @Override
             public HttpFilters filterRequest(HttpRequest originalRequest, ChannelHandlerContext ctx) {
                 return new UnregisterRequestFilter(originalRequest, ctx, activityMonitor);
+            }
+        });
+
+	addLastHttpFilterFactory(new HttpFiltersSourceAdapter() {
+            @Override
+            public HttpFilters filterRequest(HttpRequest originalRequest) {
+                return new HttpFiltersAdapter(originalRequest) {
+                    @Override
+                    public io.netty.handler.codec.http.HttpResponse proxyToServerRequest(HttpObject httpObject) {
+                        if (httpObject instanceof HttpRequest) {
+                            ((HttpRequest) httpObject).headers().remove(HttpHeaders.Names.VIA);
+                        }
+                        return null;
+                    }
+                };
             }
         });
     }
